@@ -75,8 +75,6 @@ class UserSettings(models.Model):
     class InterviewType(models.TextChoices):
         TECHNICAL = "technical", "Technical"
         HR = "hr", "HR / Behavioral"
-        PROJECT = "project", "Project-based"
-        RESUME = "resume", "Resume-based"
 
     QUESTION_COUNT_CHOICES = [
         (5, "5 questions"),

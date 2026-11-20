@@ -154,6 +154,12 @@ class InterviewConversationMessageView(APIView):
             user=user
         )
 
+    def get_throttles(self):
+        if self.request.method == "GET":
+          return []
+
+        return super().get_throttles()
+
     # GET: Retrieve the complete conversation
     def get(self, request, pk):
 
@@ -312,10 +318,18 @@ class InterviewEvaluationView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "ai_evaluation"
 
-    # Generate an evaluation for a completed interview
+    def get_throttles(self):
+        # GET requests only retrieve existing evaluations.
+        # Do not apply the AI generation rate limit to GET.
+        if self.request.method == "GET":
+            return []
+
+        return super().get_throttles()
+
+    # POST: Generate an evaluation using Gemini AI
     def post(self, request, pk):
 
-        # BLOCK 1: Get the candidate's interview session
+        # Get the candidate's interview session
         session = get_object_or_404(
             InterviewSession,
             pk=pk,
@@ -323,7 +337,7 @@ class InterviewEvaluationView(APIView):
         )
 
         try:
-            # BLOCK 2: Generate or retrieve the evaluation
+            # Generate or retrieve the evaluation
             evaluation = generate_interview_evaluation(
                 session=session
             )
@@ -334,28 +348,25 @@ class InterviewEvaluationView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
-        # BLOCK 3: Convert evaluation into JSON
+        # Serialize the evaluation
         serializer = InterviewEvaluationSerializer(
             evaluation
         )
 
-        # BLOCK 4: Return the evaluation report
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
         )
 
-    # Retrieve an already generated evaluation
+    # GET: Retrieve an already generated evaluation
     def get(self, request, pk):
 
-        # BLOCK 1: Get the candidate's interview
         session = get_object_or_404(
             InterviewSession,
             pk=pk,
             user=request.user
         )
 
-        # BLOCK 2: Find its evaluation
         evaluation = InterviewEvaluation.objects.filter(
             session=session
         ).first()
@@ -368,17 +379,14 @@ class InterviewEvaluationView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # BLOCK 3: Serialize the evaluation
         serializer = InterviewEvaluationSerializer(
             evaluation
         )
 
-        # BLOCK 4: Return the report
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
         )
-
 
 # 8. List and filter Question Bank items
 class QuestionBankListView(generics.ListAPIView):

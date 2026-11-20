@@ -39,6 +39,11 @@ function getErrorMessage(error) {
     .join(" ");
 }
 
+// Only these two interview types are currently supported.
+function normalizeInterviewType(value) {
+  return ["technical", "hr"].includes(value) ? value : "technical";
+}
+
 const initialForm = {
   domain: "",
   target_role: "",
@@ -58,7 +63,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
   const [error, setError] = useState("");
   const [interviewMode, setInterviewMode] = useState("text");
 
-  // Load interview domains
+  // Load active interview domains.
   useEffect(() => {
     let active = true;
 
@@ -97,7 +102,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
     };
   }, []);
 
-  // Load saved interview preferences from the user's account
+  // Load saved interview preferences.
   useEffect(() => {
     let active = true;
 
@@ -106,7 +111,9 @@ export default function InterviewSetup({ onStarted, onCancel }) {
         if (!active) return;
 
         setInterviewMode(
-          preferences.default_interview_mode || "text"
+          preferences.default_interview_mode === "voice"
+            ? "voice"
+            : "text"
         );
 
         setForm((previous) => ({
@@ -114,13 +121,14 @@ export default function InterviewSetup({ onStarted, onCancel }) {
           difficulty:
             preferences.default_difficulty || "intermediate",
           question_count:
-            preferences.default_question_count || 5,
-          interview_type:
-            preferences.default_interview_type || "technical",
+            Number(preferences.default_question_count) || 5,
+          interview_type: normalizeInterviewType(
+            preferences.default_interview_type
+          ),
         }));
       })
       .catch(() => {
-        // Keep the existing defaults if settings cannot be loaded.
+        // Keep defaults when saved settings cannot be loaded.
         console.log("Using default interview preferences.");
       });
 
@@ -134,7 +142,10 @@ export default function InterviewSetup({ onStarted, onCancel }) {
 
     setForm((previous) => ({
       ...previous,
-      [name]: value,
+      [name]:
+        name === "interview_type"
+          ? normalizeInterviewType(value)
+          : value,
     }));
   }
 
@@ -160,7 +171,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
         target_role: form.target_role.trim(),
         difficulty: form.difficulty,
         question_count: Number(form.question_count),
-        interview_type: form.interview_type,
+        interview_type: normalizeInterviewType(form.interview_type),
       });
 
       const startedInterview = await startInterviewSession(
@@ -202,8 +213,9 @@ export default function InterviewSetup({ onStarted, onCancel }) {
           </h1>
 
           <p className="mt-1 max-w-xl text-sm leading-6 text-[#8793A0]">
-            Choose what you want to practise. PrepIt will create a personalized
-            interview and generate questions with your AI interviewer.
+            Choose what you want to practise. PrepIt will create a
+            personalized interview and generate questions with your
+            AI interviewer.
           </p>
         </div>
 
@@ -243,6 +255,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
           )}
 
           <div className="space-y-5">
+            {/* Interview domain */}
             <div>
               <label
                 htmlFor="domain"
@@ -266,7 +279,9 @@ export default function InterviewSetup({ onStarted, onCancel }) {
                   )}
 
                   {!loadingDomains && domains.length === 0 && (
-                    <option value="">No active domains available</option>
+                    <option value="">
+                      No active domains available
+                    </option>
                   )}
 
                   {domains.map((domain) => (
@@ -292,6 +307,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
               )}
             </div>
 
+            {/* Target job role */}
             <div>
               <label
                 htmlFor="target_role"
@@ -319,6 +335,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
               </div>
             </div>
 
+            {/* Difficulty and question count */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <label
@@ -365,6 +382,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
               </div>
             </div>
 
+            {/* Only supported interview types */}
             <div>
               <label
                 htmlFor="interview_type"
@@ -380,13 +398,17 @@ export default function InterviewSetup({ onStarted, onCancel }) {
                 onChange={updateField}
                 className={fieldClass}
               >
-                <option value="technical">Technical interview</option>
-                <option value="hr">HR / Behavioral interview</option>
-                <option value="project">Project-based interview</option>
-                <option value="resume">Resume-based interview</option>
+                <option value="technical">
+                  Technical interview
+                </option>
+
+                <option value="hr">
+                  HR / Behavioral interview
+                </option>
               </select>
             </div>
 
+            {/* Text or voice mode */}
             <div>
               <label className="text-xs font-medium text-[#536274]">
                 How would you like to attend the interview?
@@ -448,13 +470,14 @@ export default function InterviewSetup({ onStarted, onCancel }) {
 
               {interviewMode === "voice" && (
                 <p className="mt-2 text-[10px] leading-5 text-[#8793A0]">
-                  Use Google Chrome and allow microphone access when the
-                  interview room opens.
+                  Use Google Chrome and allow microphone access when
+                  the interview room opens.
                 </p>
               )}
             </div>
           </div>
 
+          {/* Submit */}
           <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[#EDF0F3] pt-5">
             <p className="text-[11px] text-[#98A3AE]">
               You can receive AI follow-up questions during the interview.
@@ -462,7 +485,9 @@ export default function InterviewSetup({ onStarted, onCancel }) {
 
             <button
               type="submit"
-              disabled={starting || loadingDomains || domains.length === 0}
+              disabled={
+                starting || loadingDomains || domains.length === 0
+              }
               className="inline-flex items-center justify-center gap-2 rounded-md bg-[#477FAE] px-5 py-3 text-xs font-semibold text-white transition hover:bg-[#376F9F] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {starting ? (
@@ -480,19 +505,21 @@ export default function InterviewSetup({ onStarted, onCancel }) {
           </div>
         </form>
 
+        {/* Information panel */}
         <aside className="space-y-4">
           <div className="border border-[#E8ECF0] bg-white p-5">
             <div className="flex items-center gap-2">
               <Sparkles size={17} className="text-[#78A2C8]" />
+
               <h3 className="text-sm font-semibold text-[#39495A]">
                 Your AI interview
               </h3>
             </div>
 
             <p className="mt-3 text-xs leading-6 text-[#84919E]">
-              Gemini will generate the first question based on your selected
-              domain, target role and difficulty. It can ask a relevant
-              follow-up before moving to the next main question.
+              Gemini will generate the first question based on your
+              selected domain, target role and difficulty. It can ask
+              a relevant follow-up before moving to the next main question.
             </p>
           </div>
 
@@ -526,6 +553,7 @@ export default function InterviewSetup({ onStarted, onCancel }) {
               size={15}
               className="mt-0.5 shrink-0 text-[#78A98D]"
             />
+
             Your interview history and reports are saved to your account.
           </div>
         </aside>

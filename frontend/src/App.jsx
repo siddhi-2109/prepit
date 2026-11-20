@@ -37,6 +37,9 @@ import InterviewHistory from "./pages/InterviewHistory";
 import VoiceInterviewRoom from "./pages/VoiceInterviewRoom";
 import Progress from "./pages/Progress";
 import QuestionBank from "./pages/QuestionBank";
+import LearningPaths from "./pages/LearningPaths";
+import SettingsPage from "./pages/Settings";
+import Account from "./pages/Account";
 
 const navigationGroups = [
   {
@@ -379,6 +382,23 @@ function App() {
           >
             <Settings size={19} strokeWidth={1.7} />
             {sidebarExpanded && "Settings"}
+          </button>
+
+          <button
+            onClick={() => navigate("Account")}
+            title={!sidebarExpanded ? "My Account" : undefined}
+            className={`mt-1 flex w-full items-center rounded-md border-l-2 py-3 text-[13px] text-[#687787] transition hover:bg-[#F8FAFC] ${
+              sidebarExpanded
+                ? "justify-start gap-3 px-3"
+                : "justify-center px-2"
+            } ${
+              activePage === "Account"
+                ? "border-[#4789C0] bg-[#F3F7FB] text-[#397DAF]"
+                : "border-transparent"
+            }`}
+          >
+            <Users size={19} strokeWidth={1.7} />
+            {sidebarExpanded && "My Account"}
           </button>
 
           <div
@@ -822,10 +842,16 @@ function App() {
                 </div>
               </section>
             </div>
+           ) : activePage === "Question Bank" ? (
+            <QuestionBank />
+           ) : activePage === "Learning Paths" ? (
+            <LearningPaths />
+           ) : activePage === "Settings" ? (
+            <SettingsPage />
+           ) : activePage === "Account" ? (
+            <Account />
            ) : activePage === "Progress" ? (
             <Progress />
-           ) : activePage === "Question Bank" ? (
-             <QuestionBank />
            ) : activePage === "History" ? (
             <InterviewHistory
               sessions={sessions}
@@ -898,4 +924,6 @@ function App() {
 
 function Clock3Icon() {
   return <Activity size={17} className="text-[#7DA5C9]" />;
-}export default App;
+}
+
+export default App;

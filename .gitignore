@@ -1,5 +1,35 @@
-.env
-.venv/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+ENV/
+
+# Django and local database
+*.log
+local_settings.py
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# React / Vite
+node_modules/
+dist/
+.vite/
+
+# Tests and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# macOS
 .DS_Store

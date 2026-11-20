@@ -58,6 +58,7 @@ INSTALLED_APPS = [
      "accounts.apps.AccountsConfig",
      "interviews.apps.InterviewsConfig",
      "ai_services.apps.AiServicesConfig",
+     "learning_paths.apps.LearningPathsConfig",
 
 ]
 
@@ -155,15 +156,26 @@ MAILERS = {
     },
 }
 
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
-
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "10/min",
+        "register": "5/hour",
+        "password_change": "5/hour",
+        "ai_interview": "40/hour",
+        "ai_evaluation": "5/hour",
+    },
 }
+
 # JWT TOKEN CONFIGURATION
 
 SIMPLE_JWT = {
@@ -178,7 +190,41 @@ SIMPLE_JWT = {
 
 # CORS configuration for PrepIt frontend
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
+)
+
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=[],
+)
+
+
+# Production security settings
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+
+SECURE_SSL_REDIRECT = env.bool(
+    "DJANGO_SECURE_SSL_REDIRECT",
+    default=False,
+)
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    SECURE_HSTS_SECONDS = env.int(
+        "DJANGO_SECURE_HSTS_SECONDS",
+        default=0,
+    )
+
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False

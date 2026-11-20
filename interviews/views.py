@@ -1,4 +1,3 @@
-
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
@@ -6,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
+from rest_framework.throttling import ScopedRateThrottle
+
 from django.db.models import Q, Prefetch
 from django.utils import timezone
 
@@ -49,9 +50,7 @@ from ai_services.services import (
 class InterviewDomainListView(generics.ListAPIView):
 
     queryset = InterviewDomain.objects.filter(is_active=True)
-
     serializer_class = InterviewDomainSerializer
-
     permission_classes = [IsAuthenticated]
 
 
@@ -61,20 +60,17 @@ class InterviewSessionListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-
         return InterviewSession.objects.filter(
             user=self.request.user
         ).select_related("domain").order_by("-created_at")
 
     def get_serializer_class(self):
-
         if self.request.method == "POST":
             return InterviewSessionCreateSerializer
 
         return InterviewSessionSerializer
 
     def perform_create(self, serializer):
-
         session = create_interview_session(
             user=self.request.user,
             validated_data=serializer.validated_data
@@ -87,11 +83,9 @@ class InterviewSessionListCreateView(generics.ListCreateAPIView):
 class InterviewSessionDetailView(generics.RetrieveAPIView):
 
     serializer_class = InterviewSessionSerializer
-
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-
         return InterviewSession.objects.filter(
             user=self.request.user
         ).select_related("domain")
@@ -101,6 +95,8 @@ class InterviewSessionDetailView(generics.RetrieveAPIView):
 class InterviewSessionStartView(APIView):
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_interview"
 
     def post(self, request, pk):
 
@@ -117,14 +113,12 @@ class InterviewSessionStartView(APIView):
         )
 
         try:
-
             # Generate the first question using Gemini
             first_question = generate_first_interview_question(
                 session=session
             )
 
         except AIServiceError as error:
-
             return Response(
                 {"detail": str(error)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -150,9 +144,10 @@ class InterviewSessionStartView(APIView):
 class InterviewConversationMessageView(APIView):
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_interview"
 
     def get_session(self, pk, user):
-
         return get_object_or_404(
             InterviewSession,
             pk=pk,
@@ -206,13 +201,11 @@ class InterviewConversationMessageView(APIView):
 
         # BLOCK 3: Check question ownership
         if question.session_id != session.pk:
-
             raise ValidationError({
                 "question": "This question does not belong to this interview."
             })
 
         try:
-
             # BLOCK 4: Process the answer using Gemini
             result = process_candidate_answer(
                 session=session,
@@ -222,7 +215,6 @@ class InterviewConversationMessageView(APIView):
             )
 
         except AIServiceError as error:
-
             return Response(
                 {"detail": str(error)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -250,7 +242,6 @@ class InterviewConversationMessageView(APIView):
         next_question_data = None
 
         if next_question is not None:
-
             next_question_serializer = InterviewQuestionSerializer(
                 next_question
             )
@@ -263,7 +254,6 @@ class InterviewConversationMessageView(APIView):
         question_message_data = None
 
         if question_message is not None:
-
             question_message_serializer = ConversationMessageSerializer(
                 question_message
             )
@@ -314,10 +304,13 @@ class InterviewSessionCompleteView(APIView):
             status=status.HTTP_200_OK
         )
 
+
 # 7. Generate and retrieve interview evaluation
 class InterviewEvaluationView(APIView):
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_evaluation"
 
     # Generate an evaluation for a completed interview
     def post(self, request, pk):
@@ -330,14 +323,12 @@ class InterviewEvaluationView(APIView):
         )
 
         try:
-
             # BLOCK 2: Generate or retrieve the evaluation
             evaluation = generate_interview_evaluation(
                 session=session
             )
 
         except AIServiceError as error:
-
             return Response(
                 {"detail": str(error)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
@@ -370,7 +361,6 @@ class InterviewEvaluationView(APIView):
         ).first()
 
         if evaluation is None:
-
             return Response(
                 {
                     "detail": "Evaluation has not been generated yet."
@@ -389,12 +379,11 @@ class InterviewEvaluationView(APIView):
             status=status.HTTP_200_OK
         )
 
-    
+
 # 8. List and filter Question Bank items
 class QuestionBankListView(generics.ListAPIView):
 
     serializer_class = QuestionBankItemSerializer
-
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
@@ -496,9 +485,7 @@ class QuestionBankProgressUpdateView(APIView):
             )
 
         for field in submitted_fields:
-
             if not isinstance(request.data[field], bool):
-
                 return Response(
                     {
                         field: "This field must be true or false."
@@ -513,7 +500,6 @@ class QuestionBankProgressUpdateView(APIView):
 
         # Update bookmark status
         if "is_bookmarked" in request.data:
-
             progress.is_bookmarked = request.data["is_bookmarked"]
 
         # Update practice status
@@ -522,7 +508,6 @@ class QuestionBankProgressUpdateView(APIView):
             new_practice_status = request.data["is_practiced"]
 
             if new_practice_status and not progress.is_practiced:
-
                 progress.practice_count += 1
                 progress.last_practiced_at = timezone.now()
 

@@ -1,65 +1,41 @@
 
 import apiClient from "./apiClient";
 
-// GET: Fetch all Question Bank questions
-export async function getQuestionBank(filters = {}) {
+// GET: Fetch questions from Django and PostgreSQL
+export async function getQuestionBank() {
   try {
     const response = await apiClient.get(
-      "/interviews/question-bank/",
-      {
-        params: filters,
-      }
+      "/interviews/question-bank/"
     );
 
     const data = response.data;
 
-    // Handle normal Django REST Framework response
     if (Array.isArray(data)) {
       return data;
     }
 
-    // Handle paginated response
     if (Array.isArray(data.results)) {
       return data.results;
     }
 
     return [];
   } catch (error) {
-    console.error("Failed to fetch Question Bank:", error);
+    console.error("Question Bank loading failed:", error);
     throw error;
   }
 }
 
-// PATCH: Save bookmark status
-export async function updateBookmark(questionId, isBookmarked) {
+// PATCH: Update bookmark or practice status
+export async function updateQuestionProgress(questionId, changes) {
   try {
     const response = await apiClient.patch(
       `/interviews/question-bank/${questionId}/progress/`,
-      {
-        is_bookmarked: isBookmarked,
-      }
+      changes
     );
 
     return response.data;
   } catch (error) {
-    console.error("Failed to update bookmark:", error);
-    throw error;
-  }
-}
-
-// PATCH: Save practice status
-export async function updatePracticeStatus(questionId, isPracticed) {
-  try {
-    const response = await apiClient.patch(
-      `/interviews/question-bank/${questionId}/progress/`,
-      {
-        is_practiced: isPracticed,
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error("Failed to update practice status:", error);
+    console.error("Question progress update failed:", error);
     throw error;
   }
 }
